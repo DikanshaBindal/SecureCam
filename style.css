@@ -220,6 +220,26 @@ body.pro-suite {
 .modal-btns { display: flex; gap: 1rem; }
 .btn-ghost { background: none; border: 1px solid var(--border); color: var(--text-muted); flex: 1; padding: 1rem; border-radius: 12px; cursor: pointer; }
 
+.mt-8 { margin-top: 2rem; }
+.card-head-mini { display: flex; align-items: center; gap: 0.5rem; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 0.8rem; }
+.ledger-card { 
+    background: rgba(0,0,0,0.3); border: 1px solid var(--border); 
+    border-radius: 12px; padding: 1.2rem; display: flex; flex-direction: column; gap: 1rem;
+}
+.status-line { display: flex; justify-content: space-between; align-items: center; }
+.status-line .label { font-size: 0.55rem; color: var(--text-muted); font-weight: 700; }
+.status-line .value { font-size: 0.75rem; font-family: monospace; }
+.tx-link { 
+    display: inline-flex; align-items: center; gap: 0.5rem; 
+    font-size: 0.65rem; color: var(--cyan); text-decoration: none; font-weight: 800;
+    margin-top: 0.5rem; border-bottom: 1px solid transparent; transition: 0.2s;
+}
+.tx-link:hover { border-color: var(--cyan); }
+.truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+.processing { color: var(--cyan) !important; animation: pulse 1s infinite; }
+.success-tx { color: var(--success) !important; }
+.error-tx { color: var(--error) !important; }
+
 /* VIEWER */
 .viewer-card { width: 90%; max-width: 1000px; background: var(--bg-dark); border-radius: 24px; overflow: hidden; }
 .viewer-head { padding: 1.5rem 2rem; background: rgba(255,255,255,0.02); display: flex; justify-content: space-between; align-items: center; }
