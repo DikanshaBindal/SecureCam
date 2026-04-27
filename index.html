@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureCam | Blockchain Data Integrity</title>
+    <title>SecureCam | CCTV Integrity System</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.363.0/lucide.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/11.2.2/stellar-sdk.min.js"></script>
 </head>
 <body>
     <div class="background-glow"></div>
@@ -18,97 +17,112 @@
                 <i data-lucide="shield-check" class="logo-icon"></i>
                 <span class="logo-text">SECURE<span class="accent">CAM</span></span>
             </div>
-            <div id="wallet-section">
-                <button id="connect-btn" class="btn-primary">
-                    <i data-lucide="wallet"></i> Connect Wallet
-                </button>
+            <div class="status-badge">
+                <span class="pulse-dot"></span> Local Integrity Mode
             </div>
         </div>
     </nav>
 
     <main class="container">
         <header class="hero">
-            <h1>CCTV Integrity <span class="gradient-text">Verification</span></h1>
-            <p>Cryptographic proof of footage authenticity powered by Stellar.</p>
+            <h1>CCTV Integrity <span class="gradient-text">Verified</span></h1>
+            <p>Ensure your security footage is authentic and untampered.</p>
         </header>
 
+        <div class="steps-progress">
+            <div class="step active" id="step-1">1. Upload</div>
+            <div class="step" id="step-2">2. Hash</div>
+            <div class="step" id="step-3">3. Store</div>
+            <div class="step" id="step-4">4. Verify</div>
+        </div>
+
         <div class="dashboard">
-            <!-- Upload Section -->
-            <section class="card glass-card" id="upload-section">
+            <!-- Phase 1: Upload & Process -->
+            <section class="card glass-card" id="process-section">
                 <div class="card-header">
-                    <i data-lucide="upload-cloud"></i>
-                    <h2>Registry New Footage</h2>
+                    <i data-lucide="camera"></i>
+                    <h2>Capture Footage</h2>
                 </div>
+                
                 <div class="drop-zone" id="drop-zone">
-                    <div class="drop-content">
-                        <i data-lucide="camera" class="hero-icon"></i>
-                        <p>Drag file here or <span class="browse">browse</span></p>
-                        <input type="file" id="file-input" hidden>
+                    <div class="drop-content" id="drop-content">
+                        <i data-lucide="upload" class="hero-icon"></i>
+                        <p>Select CCTV Recording</p>
+                        <input type="file" id="file-input" hidden accept="video/*,image/*">
+                    </div>
+                    <div id="preview-area" class="hidden">
+                        <div class="preview-container" id="preview-container"></div>
+                        <p id="preview-name" class="file-name-label"></p>
                     </div>
                 </div>
-                <div id="file-details" class="hidden">
-                    <div class="file-info">
-                        <span id="file-name">filename.mp4</span>
-                        <span id="file-size">12MB</span>
-                    </div>
+
+                <div id="processing-info" class="hidden">
                     <div class="hash-box">
-                        <label>SHA-256 HASH</label>
-                        <code id="file-hash">---</code>
+                        <label>SHA-256 SIGNATURE</label>
+                        <code id="generated-hash">---</code>
                     </div>
-                    <button id="register-btn" class="btn-primary w-full disabled">
-                        Commit to Blockchain
+                    <button id="store-btn" class="btn-primary w-full">
+                        Secure in Blockchain Ledger
                     </button>
+                    <button id="reset-btn" class="btn-link mt-2">Reset</button>
                 </div>
             </section>
 
-            <!-- Verification Section -->
+            <!-- Phase 2: Verify -->
             <section class="card glass-card" id="verify-section">
                 <div class="card-header">
-                    <i data-lucide="search-check"></i>
-                    <h2>Verify Integrity</h2>
+                    <i data-lucide="verified"></i>
+                    <h2>Audit Registry</h2>
                 </div>
-                <p class="card-desc">Re-upload a file to verify against its blockchain record.</p>
-                <div class="verify-zone">
-                    <input type="file" id="verify-file-input" class="input-minimal">
-                    <button id="verify-btn" class="btn-secondary">Check Authenticity</button>
+                <p class="card-desc">Upload a file to verify it against the secure ledger.</p>
+                
+                <div class="verify-controls">
+                    <input type="file" id="verify-input" class="file-input-minimal">
+                    <button id="verify-btn" class="btn-secondary w-full mt-4">Run Audit</button>
                 </div>
+
                 <div id="verify-result" class="hidden">
-                    <div class="result-badge" id="result-badge">
-                        <i data-lucide="check-circle" class="status-icon"></i>
-                        <span id="result-text">Verified</span>
+                    <div class="result-box" id="result-box">
+                        <i data-lucide="info" id="result-icon"></i>
+                        <span id="result-status">Checking...</span>
                     </div>
-                    <div class="tx-links">
-                        <a id="tx-link" href="#" target="_blank" class="explorer-link">
-                            View Transaction <i data-lucide="external-link"></i>
-                        </a>
-                    </div>
+                    <p class="result-details" id="result-details"></p>
                 </div>
             </section>
 
-            <!-- Recent Activity -->
+            <!-- Blockchain Analytics -->
             <section class="card glass-card lg-span-2">
                 <div class="card-header">
-                    <i data-lucide="history"></i>
-                    <h2>Recent Hashes</h2>
+                    <i data-lucide="database"></i>
+                    <h2>Simulated Blockchain Ledger</h2>
                 </div>
-                <ul class="activity-list" id="activity-list">
-                    <li class="empty-state">No recent activity found.</li>
-                </ul> section>
+                <div class="table-container">
+                    <table id="ledger-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Filename</th>
+                                <th>Cryptographic Hash</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledger-body">
+                            <tr>
+                                <td colspan="4" class="empty-row">No records secured yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
         </div>
     </main>
 
-    <!-- UI Feedback -->
-    <div id="toast" class="toast hidden"></div>
     <div id="loader" class="loader-overlay hidden">
         <div class="spinner"></div>
-        <p id="loader-text">Hashing file...</p>
+        <p id="loader-text">Hashing...</p>
     </div>
 
-    <script src="utils.js"></script>
     <script src="app.js"></script>
-    <script src="tests.js"></script>
-    <script>
-        lucide.createIcons();
-    </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>

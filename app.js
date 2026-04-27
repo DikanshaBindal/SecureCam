@@ -1,99 +1,182 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // UI Elements
+    // --- State & Constants ---
+    let blockchainLedger = JSON.parse(localStorage.getItem('sc_ledger') || '[]');
+    let currentHash = null;
+    let currentFile = null;
+
+    // --- DOM Elements ---
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
-    const fileDetails = document.getElementById('file-details');
-    const fileHashElem = document.getElementById('file-hash');
-    const fileNameElem = document.getElementById('file-name');
-    const fileSizeElem = document.getElementById('file-size');
-    const registerBtn = document.getElementById('register-btn');
+    const dropContent = document.getElementById('drop-content');
+    const previewArea = document.getElementById('preview-area');
+    const previewContainer = document.getElementById('preview-container');
+    const previewName = document.getElementById('preview-name');
     
-    const verifyFileInput = document.getElementById('verify-file-input');
+    const processingInfo = document.getElementById('processing-info');
+    const generatedHashElem = document.getElementById('generated-hash');
+    const storeBtn = document.getElementById('store-btn');
+    const resetBtn = document.getElementById('reset-btn');
+
+    const verifyInput = document.getElementById('verify-input');
     const verifyBtn = document.getElementById('verify-btn');
     const verifyResult = document.getElementById('verify-result');
-    const resultText = document.getElementById('result-text');
-    const resultBadge = document.getElementById('result-badge');
+    const resultBox = document.getElementById('result-box');
+    const resultStatus = document.getElementById('result-status');
+    const resultDetails = document.getElementById('result-details');
 
+    const ledgerBody = document.getElementById('ledger-body');
     const loader = document.getElementById('loader');
     const loaderText = document.getElementById('loader-text');
-    const activityList = document.getElementById('activity-list');
 
-    let currentFileHash = '';
+    // --- INITIALIZATION ---
+    renderLedger();
 
-    // Init UI
-    renderHistory();
-
-    // --- Upload Logic ---
+    // --- STEP 1: UPLOAD & PREVIEW ---
     dropZone.onclick = () => fileInput.click();
-    
+
     fileInput.onchange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        showLoader('Computing SHA-256 Hash...');
         
+        currentFile = file;
+        await processFile(file);
+    };
+
+    async function processFile(file) {
+        setStep(2);
+        showLoader('Generating Cryptographic Hash...');
+        
+        // Show Preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            previewContainer.innerHTML = '';
+            if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.src = e.target.result;
+                video.autoplay = true;
+                video.muted = true;
+                video.loop = true;
+                previewContainer.appendChild(video);
+            } else if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                previewContainer.appendChild(img);
+            }
+            
+            dropContent.classList.add('hidden');
+            previewArea.classList.remove('hidden');
+            previewName.innerText = file.name;
+        };
+        reader.readAsDataURL(file);
+
+        // Generate Hash
         try {
-            const hash = await SecureUtils.generateHash(file);
-            currentFileHash = hash;
-            
-            fileNameElem.innerText = file.name;
-            fileSizeElem.innerText = SecureUtils.formatBytes(file.size);
-            fileHashElem.innerText = hash;
-            
-            fileDetails.classList.remove('hidden');
-            registerBtn.classList.remove('disabled');
-            
+            const hash = await generateSHA256(file);
+            currentHash = hash;
+            generatedHashElem.innerText = hash;
+            processingInfo.classList.remove('hidden');
             hideLoader();
         } catch (err) {
-            alert('Error hashing file');
+            console.error(err);
+            alert('Hash generation failed.');
             hideLoader();
         }
+    }
+
+    // --- STEP 2: STORE (SIMULATED BLOCKCHAIN) ---
+    storeBtn.onclick = () => {
+        if (!currentHash) return;
+        
+        setStep(3);
+        showLoader('Securing in Ledger...');
+        
+        setTimeout(() => {
+            const record = {
+                timestamp: new Date().toLocaleTimeString(),
+                filename: currentFile.name,
+                hash: currentHash,
+                status: 'SECURE'
+            };
+
+            blockchainLedger.unshift(record);
+            localStorage.setItem('sc_ledger', JSON.stringify(blockchainLedger));
+            
+            renderLedger();
+            hideLoader();
+            alert('CCTV Integrity Verified & Record Stored Successfully.');
+            resetUI();
+        }, 1500);
     };
 
-    registerBtn.onclick = async () => {
-        showLoader('Stellar Transaction in Progress...');
-        
-        const result = await StellarHelper.storeHashOnChain(null, currentFileHash);
-        
-        if (result.success) {
-            SecureUtils.saveToHistory({
-                name: fileNameElem.innerText,
-                hash: currentFileHash,
-                tx: result.hash,
-                date: new Date().toLocaleString()
-            });
-            renderHistory();
-            alert('Success! Hash committed to Stellar Testnet.');
-        }
-        
-        hideLoader();
-    };
-
-    // --- Verification Logic ---
+    // --- STEP 3: VERIFY ---
     verifyBtn.onclick = async () => {
-        const file = verifyFileInput.files[0];
-        if (!file) return alert('Select a file to verify');
+        const file = verifyInput.files[0];
+        if (!file) return alert('Please upload a file to audit.');
 
-        showLoader('Verifying Integrity...');
-        
-        const hash = await SecureUtils.generateHash(file);
-        const history = SecureUtils.getHistory();
-        
-        const match = history.find(h => h.hash === hash);
+        showLoader('Auditing Digital Fingerprint...');
+        setStep(4);
+
+        const newHash = await generateSHA256(file);
+        const match = blockchainLedger.find(r => r.hash === newHash);
 
         verifyResult.classList.remove('hidden');
+        
         if (match) {
-            resultText.innerText = 'Verified (Untampered)';
-            resultBadge.className = 'result-badge success';
+            resultBox.className = 'result-box verified';
+            resultStatus.innerText = 'VERIFIED (Untampered)';
+            resultDetails.innerText = `Matching record found: Identical to footage stored at ${match.timestamp}`;
         } else {
-            resultText.innerText = 'Tampered / Unknown';
-            resultBadge.className = 'result-badge error';
+            resultBox.className = 'result-box tampered';
+            resultStatus.innerText = 'TAMPERED / UNKNOWN';
+            resultDetails.innerText = 'The cryptographic signature of this file does not match any entry in the secure ledger.';
         }
         
         hideLoader();
     };
 
-    // --- Helpers ---
+    resetBtn.onclick = resetUI;
+
+    // --- CORE LOGIC ---
+    async function generateSHA256(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function renderLedger() {
+        if (blockchainLedger.length === 0) {
+            ledgerBody.innerHTML = '<tr><td colspan="4" class="empty-row">No records secured yet.</td></tr>';
+            return;
+        }
+
+        ledgerBody.innerHTML = blockchainLedger.map(item => `
+            <tr>
+                <td>${item.timestamp}</td>
+                <td>${item.filename}</td>
+                <td><code>${item.hash.slice(0, 24)}...</code></td>
+                <td style="color: var(--success); font-weight: 700;">${item.status}</td>
+            </tr>
+        `).join('');
+    }
+
+    function setStep(num) {
+        document.querySelectorAll('.step').forEach((s, idx) => {
+            if (idx + 1 === num) s.classList.add('active');
+            else s.classList.remove('active');
+        });
+    }
+
+    function resetUI() {
+        currentHash = null;
+        currentFile = null;
+        fileInput.value = '';
+        dropContent.classList.remove('hidden');
+        previewArea.classList.add('hidden');
+        processingInfo.classList.add('hidden');
+        setStep(1);
+    }
+
     function showLoader(text) {
         loaderText.innerText = text;
         loader.classList.remove('hidden');
@@ -101,20 +184,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hideLoader() {
         loader.classList.add('hidden');
-    }
-
-    function renderHistory() {
-        const history = SecureUtils.getHistory();
-        if (history.length === 0) return;
-
-        activityList.innerHTML = history.map(item => `
-            <li class="activity-item">
-                <div class="activity-info">
-                    <strong>${item.name}</strong>
-                    <span class="activity-hash">${item.hash.slice(0, 16)}...</span>
-                </div>
-                <span class="activity-date">${item.date}</span>
-            </li>
-        `).join('');
     }
 });
