@@ -49,7 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. WALLET GATE LOGIC ---
     gateConnectBtn.onclick = async () => {
-        const api = window.freighterApi;
+        // Universal Detection (v1.x uses freighterApi, v6.x uses freighter)
+        const api = window.freighterApi || window.freighter;
         
         if (!api) {
             gateError.innerText = 'EXTENSION NOT FOUND: Please install Freighter Wallet from freighter.app and refresh.';
