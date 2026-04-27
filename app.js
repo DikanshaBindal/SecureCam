@@ -42,16 +42,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- WALLET CONNECT ---
     connectBtn.onclick = async () => {
+        const api = window.freighterApi;
+        if (!api) {
+            alert('Freighter API not loaded. Please try refreshing or check your connection.');
+            return;
+        }
+
         showLoader('Connecting to Freighter...');
         try {
-            const isInstalled = await freighterApi.isConnected();
+            const isInstalled = await api.isConnected();
             if (!isInstalled) {
                 alert('Freighter Wallet not found. Please install the extension!');
                 hideLoader();
                 return;
             }
 
-            const { address } = await freighterApi.getAddress();
+            const { address } = await api.getAddress();
             userPublicKey = address;
             
             userAddressElem.innerText = `${address.slice(0, 6)}...${address.slice(-6)}`;
@@ -131,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .build();
 
             // 3. Sign with Freighter
-            const signedXDR = await freighterApi.signTransaction(transaction.toXDR(), {
+            const signedXDR = await window.freighterApi.signTransaction(transaction.toXDR(), {
                 network: 'TESTNET',
             });
 
