@@ -49,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. WALLET GATE LOGIC ---
     gateConnectBtn.onclick = async () => {
-        showLoader('AUTHENTICATING SYSTEM...');
         const api = window.freighterApi;
         
         if (!api) {
@@ -59,11 +58,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        showLoader('CONNECTING TO FREIGHTER...');
+        
+        let authTimeout = setTimeout(() => {
+            hideLoader();
+            gateError.innerText = 'CONNECTION TIMEOUT: Please ensure Freighter is unlocked and your browser allows popups.';
+            gateError.classList.remove('hidden');
+        }, 15000);
+
         try {
             const address = await api.getPublicKey();
+            clearTimeout(authTimeout);
+            
+            if (!address) throw new Error('No address returned');
+            
             enterDashboard(address);
         } catch (err) {
-            gateError.innerText = 'Authentication Failed.';
+            clearTimeout(authTimeout);
+            console.error(err);
+            gateError.innerText = `AUTH ERROR: ${err.message || 'Verification failed'}. Refresh and try again.`;
             gateError.classList.remove('hidden');
             hideLoader();
         }
