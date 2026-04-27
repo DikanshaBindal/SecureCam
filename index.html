@@ -8,19 +8,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.363.0/lucide.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/11.2.2/stellar-sdk.min.js"></script>
+    <script src="https://unpkg.com/@stellar/freighter-api@latest/dist/index.min.js"></script>
 </head>
 <body class="pro-suite">
     <div class="vignette"></div>
-    <!-- Version: 4.2.1-FORCE-GATE-RELOAD -->
+    <!-- Version: 4.5.1-FINAL-LOCKDOWN -->
     <!-- 1. WALLET GATE -->
     <div id="wallet-gate" class="gate-overlay">
         <div class="gate-card glass-panel">
             <i data-lucide="shield-alert" class="gate-icon"></i>
             <h1>SYSTEM LOCK</h1>
-            <p>Cryptographic authentication required for dashboard access.</p>
+            <p>Authentication required for dashboard access.</p>
             <button id="gate-connect-btn" class="btn-neon">
                 <i data-lucide="key"></i> Unlock with Freighter
             </button>
+            <div style="margin-top:2rem;">
+                <a href="#" id="demo-mode-link" style="color:var(--text-muted); font-size:0.75rem; text-decoration:none; opacity:0.6;">Testing? Enter Demo Mode</a>
+            </div>
             <div id="gate-error" class="error-msg hidden"></div>
         </div>
     </div>
