@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureCam | Blockchain Data Integrity</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.363.0/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/11.2.2/stellar-sdk.min.js"></script>
+</head>
+<body>
+    <div class="background-glow"></div>
+    
+    <nav class="glass-nav">
+        <div class="nav-content">
+            <div class="logo">
+                <i data-lucide="shield-check" class="logo-icon"></i>
+                <span class="logo-text">SECURE<span class="accent">CAM</span></span>
+            </div>
+            <div id="wallet-section">
+                <button id="connect-btn" class="btn-primary">
+                    <i data-lucide="wallet"></i> Connect Wallet
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <header class="hero">
+            <h1>CCTV Integrity <span class="gradient-text">Verification</span></h1>
+            <p>Cryptographic proof of footage authenticity powered by Stellar.</p>
+        </header>
+
+        <div class="dashboard">
+            <!-- Upload Section -->
+            <section class="card glass-card" id="upload-section">
+                <div class="card-header">
+                    <i data-lucide="upload-cloud"></i>
+                    <h2>Registry New Footage</h2>
+                </div>
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-content">
+                        <i data-lucide="camera" class="hero-icon"></i>
+                        <p>Drag file here or <span class="browse">browse</span></p>
+                        <input type="file" id="file-input" hidden>
+                    </div>
+                </div>
+                <div id="file-details" class="hidden">
+                    <div class="file-info">
+                        <span id="file-name">filename.mp4</span>
+                        <span id="file-size">12MB</span>
+                    </div>
+                    <div class="hash-box">
+                        <label>SHA-256 HASH</label>
+                        <code id="file-hash">---</code>
+                    </div>
+                    <button id="register-btn" class="btn-primary w-full disabled">
+                        Commit to Blockchain
+                    </button>
+                </div>
+            </section>
+
+            <!-- Verification Section -->
+            <section class="card glass-card" id="verify-section">
+                <div class="card-header">
+                    <i data-lucide="search-check"></i>
+                    <h2>Verify Integrity</h2>
+                </div>
+                <p class="card-desc">Re-upload a file to verify against its blockchain record.</p>
+                <div class="verify-zone">
+                    <input type="file" id="verify-file-input" class="input-minimal">
+                    <button id="verify-btn" class="btn-secondary">Check Authenticity</button>
+                </div>
+                <div id="verify-result" class="hidden">
+                    <div class="result-badge" id="result-badge">
+                        <i data-lucide="check-circle" class="status-icon"></i>
+                        <span id="result-text">Verified</span>
+                    </div>
+                    <div class="tx-links">
+                        <a id="tx-link" href="#" target="_blank" class="explorer-link">
+                            View Transaction <i data-lucide="external-link"></i>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Activity -->
+            <section class="card glass-card lg-span-2">
+                <div class="card-header">
+                    <i data-lucide="history"></i>
+                    <h2>Recent Hashes</h2>
+                </div>
+                <ul class="activity-list" id="activity-list">
+                    <li class="empty-state">No recent activity found.</li>
+                </ul> section>
+        </div>
+    </main>
+
+    <!-- UI Feedback -->
+    <div id="toast" class="toast hidden"></div>
+    <div id="loader" class="loader-overlay hidden">
+        <div class="spinner"></div>
+        <p id="loader-text">Hashing file...</p>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="app.js"></script>
+    <script src="tests.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
