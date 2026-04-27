@@ -52,9 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const api = window.freighterApi;
         
         if (!api) {
-            gateError.innerText = 'Freighter Not Found. Switched to DEMO MODE.';
+            gateError.innerText = 'EXTENSION NOT FOUND: Please install Freighter Wallet from freighter.app and refresh.';
             gateError.classList.remove('hidden');
-            setTimeout(() => enterDashboard('GB_DEMO_ACCOUNT_12345'), 1500);
+            hideLoader();
             return;
         }
 
