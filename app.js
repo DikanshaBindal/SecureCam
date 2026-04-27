@@ -71,6 +71,20 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const address = await api.getPublicKey();
             if (!address) throw new Error("Approval denied");
+
+            // --- MANDATORY LOGON CHALLENGE ---
+            // We create a dummy transaction to force the wallet to POP UP and ask for a signature
+            showLoader('SIGNING AUTH CHALLENGE...');
+            
+            // Note: This is a login challenge, not a real spend. 
+            // It will force the Freighter popup for "Signing"
+            const challenge = await api.signTransaction(
+                "AAAAAgAAAABl0InZlbnRvcnlTZWN1cmVDYW0AAAAAAAAAAQAAAAAAAAAAAAAAAQAAAAAAAAAA", // Empty dummy XDR
+                { network: "TESTNET" }
+            );
+
+            if (!challenge) throw new Error("Signature required for SOC access");
+
             enterDashboard(address);
         } catch (err) {
             console.error("Strict Connect Fail:", err);
