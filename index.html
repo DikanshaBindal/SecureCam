@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureCam | CCTV Integrity System</title>
+    <title>SecureCam | Blockchain CCTV Registry</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.363.0/lucide.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stellar-sdk/11.2.2/stellar-sdk.min.js"></script>
 </head>
 <body>
     <div class="background-glow"></div>
@@ -17,22 +18,27 @@
                 <i data-lucide="shield-check" class="logo-icon"></i>
                 <span class="logo-text">SECURE<span class="accent">CAM</span></span>
             </div>
-            <div class="status-badge">
-                <span class="pulse-dot"></span> Local Integrity Mode
+            <div id="wallet-auth">
+                <button id="connect-wallet" class="btn-primary-mini">
+                    <i data-lucide="wallet"></i> Connect Wallet
+                </button>
+                <div id="wallet-info" class="hidden">
+                    <span id="user-address" class="address-tag">---</span>
+                </div>
             </div>
         </div>
     </nav>
 
     <main class="container">
         <header class="hero">
-            <h1>CCTV Integrity <span class="gradient-text">Verified</span></h1>
-            <p>Ensure your security footage is authentic and untampered.</p>
+            <h1>Immutable CCTV <span class="gradient-text">Registry</span></h1>
+            <p>Connect your wallet to anchor footage integrity on the Stellar Network.</p>
         </header>
 
         <div class="steps-progress">
-            <div class="step active" id="step-1">1. Upload</div>
-            <div class="step" id="step-2">2. Hash</div>
-            <div class="step" id="step-3">3. Store</div>
+            <div class="step active" id="step-1">1. Connect</div>
+            <div class="step" id="step-2">2. Upload</div>
+            <div class="step" id="step-3">3. Sign</div>
             <div class="step" id="step-4">4. Verify</div>
         </div>
 
@@ -58,13 +64,13 @@
 
                 <div id="processing-info" class="hidden">
                     <div class="hash-box">
-                        <label>SHA-256 SIGNATURE</label>
+                        <label>DIGITAL FINGERPRINT (SHA-256)</label>
                         <code id="generated-hash">---</code>
                     </div>
-                    <button id="store-btn" class="btn-primary w-full">
-                        Secure in Blockchain Ledger
+                    <button id="store-btn" class="btn-primary w-full disabled">
+                        Commit to Stellar Testnet
                     </button>
-                    <button id="reset-btn" class="btn-link mt-2">Reset</button>
+                    <p class="hint-text mt-2"><i data-lucide="info" class="tiny-icon"></i> Requires Freighter signature</p>
                 </div>
             </section>
 
@@ -72,9 +78,9 @@
             <section class="card glass-card" id="verify-section">
                 <div class="card-header">
                     <i data-lucide="verified"></i>
-                    <h2>Audit Registry</h2>
+                    <h2>Ledger Audit</h2>
                 </div>
-                <p class="card-desc">Upload a file to verify it against the secure ledger.</p>
+                <p class="card-desc">Audit a file against its global blockchain record.</p>
                 
                 <div class="verify-controls">
                     <input type="file" id="verify-input" class="file-input-minimal">
@@ -87,6 +93,11 @@
                         <span id="result-status">Checking...</span>
                     </div>
                     <p class="result-details" id="result-details"></p>
+                    <div id="explorer-link-container" class="hidden mt-2">
+                        <a id="explorer-link" href="#" target="_blank" class="link-text">
+                            View on Stellar Expert <i data-lucide="external-link"></i>
+                        </a>
+                    </div>
                 </div>
             </section>
 
@@ -94,7 +105,7 @@
             <section class="card glass-card lg-span-2">
                 <div class="card-header">
                     <i data-lucide="database"></i>
-                    <h2>Simulated Blockchain Ledger</h2>
+                    <h2>Stellar Testnet Activity</h2>
                 </div>
                 <div class="table-container">
                     <table id="ledger-table">
@@ -102,13 +113,13 @@
                             <tr>
                                 <th>Timestamp</th>
                                 <th>Filename</th>
-                                <th>Cryptographic Hash</th>
+                                <th>Transaction Hash</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="ledger-body">
                             <tr>
-                                <td colspan="4" class="empty-row">No records secured yet.</td>
+                                <td colspan="4" class="empty-row">No records anchored yet.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -122,6 +133,8 @@
         <p id="loader-text">Hashing...</p>
     </div>
 
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/freighter-api/6.0.1/index.min.js"></script>
     <script src="app.js"></script>
     <script>lucide.createIcons();</script>
 </body>
