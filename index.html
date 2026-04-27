@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureCam | Blockchain CCTV Registry</title>
+    <title>SecureCam | Level 1 Blockchain Hub</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.363.0/lucide.min.js"></script>
@@ -23,7 +23,13 @@
                     <i data-lucide="wallet"></i> Connect Wallet
                 </button>
                 <div id="wallet-info" class="hidden">
-                    <span id="user-address" class="address-tag">---</span>
+                    <div class="user-stats">
+                        <span id="xlm-balance" class="balance-badge">0.00 XLM</span>
+                        <span id="user-address" class="address-tag">---</span>
+                        <button id="disconnect-wallet" class="btn-icon-only" title="Disconnect">
+                            <i data-lucide="log-out"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -31,96 +37,74 @@
 
     <main class="container">
         <header class="hero">
-            <h1>Immutable CCTV <span class="gradient-text">Registry</span></h1>
-            <p>Connect your wallet to anchor footage integrity on the Stellar Network.</p>
+            <h1>Level 1: <span class="gradient-text">Wallet Hub</span></h1>
+            <p>Connect your Freighter wallet to manage assets and anchor security footage.</p>
         </header>
 
-        <div class="steps-progress">
-            <div class="step active" id="step-1">1. Connect</div>
-            <div class="step" id="step-2">2. Upload</div>
-            <div class="step" id="step-3">3. Sign</div>
-            <div class="step" id="step-4">4. Verify</div>
-        </div>
-
         <div class="dashboard">
-            <!-- Phase 1: Upload & Process -->
-            <section class="card glass-card" id="process-section">
+            <!-- Wallet Action Section -->
+            <section class="card glass-card">
+                <div class="card-header">
+                    <i data-lucide="send"></i>
+                    <h2>Quick Transaction</h2>
+                </div>
+                <p class="card-desc">Send 1 XLM to yourself to verify the transaction flow.</p>
+                <div class="action-box">
+                    <button id="test-tx-btn" class="btn-primary w-full disabled">
+                        Send Test Transaction
+                    </button>
+                </div>
+                <div id="tx-feedback" class="hidden mt-4">
+                    <div class="result-box" id="tx-result-box">
+                        <i data-lucide="check-circle"></i>
+                        <span id="tx-result-text">Success</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CCTV Anchor Section -->
+            <section class="card glass-card">
                 <div class="card-header">
                     <i data-lucide="camera"></i>
-                    <h2>Capture Footage</h2>
+                    <h2>CCTV Anchor</h2>
                 </div>
-                
                 <div class="drop-zone" id="drop-zone">
                     <div class="drop-content" id="drop-content">
-                        <i data-lucide="upload" class="hero-icon"></i>
-                        <p>Select CCTV Recording</p>
+                        <i data-lucide="plus" class="hero-icon"></i>
+                        <p>Upload Footage</p>
                         <input type="file" id="file-input" hidden accept="video/*,image/*">
                     </div>
                     <div id="preview-area" class="hidden">
                         <div class="preview-container" id="preview-container"></div>
-                        <p id="preview-name" class="file-name-label"></p>
                     </div>
                 </div>
-
-                <div id="processing-info" class="hidden">
+                <div id="hash-info" class="hidden mt-4">
                     <div class="hash-box">
-                        <label>DIGITAL FINGERPRINT (SHA-256)</label>
+                        <label>FINGERPRINT</label>
                         <code id="generated-hash">---</code>
                     </div>
-                    <button id="store-btn" class="btn-primary w-full disabled">
-                        Commit to Stellar Testnet
-                    </button>
-                    <p class="hint-text mt-2"><i data-lucide="info" class="tiny-icon"></i> Requires Freighter signature</p>
+                    <button id="secure-btn" class="btn-secondary w-full">Anchor to Ledger</button>
                 </div>
             </section>
 
-            <!-- Phase 2: Verify -->
-            <section class="card glass-card" id="verify-section">
-                <div class="card-header">
-                    <i data-lucide="verified"></i>
-                    <h2>Ledger Audit</h2>
-                </div>
-                <p class="card-desc">Audit a file against its global blockchain record.</p>
-                
-                <div class="verify-controls">
-                    <input type="file" id="verify-input" class="file-input-minimal">
-                    <button id="verify-btn" class="btn-secondary w-full mt-4">Run Audit</button>
-                </div>
-
-                <div id="verify-result" class="hidden">
-                    <div class="result-box" id="result-box">
-                        <i data-lucide="info" id="result-icon"></i>
-                        <span id="result-status">Checking...</span>
-                    </div>
-                    <p class="result-details" id="result-details"></p>
-                    <div id="explorer-link-container" class="hidden mt-2">
-                        <a id="explorer-link" href="#" target="_blank" class="link-text">
-                            View on Stellar Expert <i data-lucide="external-link"></i>
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Blockchain Analytics -->
+            <!-- Ledger Table -->
             <section class="card glass-card lg-span-2">
                 <div class="card-header">
-                    <i data-lucide="database"></i>
-                    <h2>Stellar Testnet Activity</h2>
+                    <i data-lucide="list"></i>
+                    <h2>Transaction History</h2>
                 </div>
                 <div class="table-container">
-                    <table id="ledger-table">
+                    <table>
                         <thead>
                             <tr>
-                                <th>Timestamp</th>
-                                <th>Filename</th>
+                                <th>Type</th>
                                 <th>Transaction Hash</th>
                                 <th>Status</th>
+                                <th>Explorer</th>
                             </tr>
                         </thead>
                         <tbody id="ledger-body">
-                            <tr>
-                                <td colspan="4" class="empty-row">No records anchored yet.</td>
-                            </tr>
+                            <tr><td colspan="4" class="empty-row">No activity detected.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -130,7 +114,7 @@
 
     <div id="loader" class="loader-overlay hidden">
         <div class="spinner"></div>
-        <p id="loader-text">Hashing...</p>
+        <p id="loader-text">Processing...</p>
     </div>
 
     <!-- Scripts -->
