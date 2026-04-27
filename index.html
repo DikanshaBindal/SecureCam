@@ -87,6 +87,26 @@
                         <div class="empty-state">No recordings archived.</div>
                     </div>
                 </div>
+                
+                <!-- NEW: Blockchain Operations Center -->
+                <div class="blockchain-monitor mt-8">
+                    <div class="card-head-mini">
+                        <i data-lucide="blocks" class="cyan"></i> <span>LEDGER STATUS</span>
+                    </div>
+                    <div id="ledger-status-box" class="ledger-card">
+                        <div class="status-line">
+                            <span class="label">PROCESS</span>
+                            <span id="tx-status" class="value">IDLE / STANDBY</span>
+                        </div>
+                        <div class="status-line">
+                            <span class="label">LAST HASH</span>
+                            <span id="tx-hash-display" class="value truncate">---</span>
+                        </div>
+                        <div id="tx-link-wrap" class="hidden">
+                            <a id="tx-view-link" href="#" target="_blank" class="tx-link">VIEW ON EXPLORER <i data-lucide="external-link"></i></a>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- C. VERIFY RECORDING -->
