@@ -55,6 +55,11 @@
                 </div>
                 <div class="video-stage">
                     <video id="webcam-feed" autoplay muted playsinline></video>
+                    <div id="cam-gate" class="cam-overlay">
+                        <i data-lucide="video-off" style="margin-bottom:1rem; opacity:0.3;"></i>
+                        <div>SYSTEM IDLE</div>
+                        <button id="activate-cam-btn" class="btn-cyan-outline mt-4">ACTIVATE SOURCE</button>
+                    </div>
                     <div class="overlay-data">
                         <span id="live-timestamp">00:00:00</span>
                         <span>CAM_01 / ENCRYPTED</span>
