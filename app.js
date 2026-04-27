@@ -1,54 +1,64 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Stellar Setup ---
+    // --- Configuration ---
     const HORIZON_URL = 'https://horizon-testnet.stellar.org';
     const server = new StellarSdk.Horizon.Server(HORIZON_URL);
     
-    let userPublicKey = localStorage.getItem('sc_wallet_address');
-    let localHistory = JSON.parse(localStorage.getItem('sc_v3_history') || '[]');
+    let userPublicKey = localStorage.getItem('sc_wallet_addr');
+    let activityLog = JSON.parse(localStorage.getItem('sc_pro_ledger') || '[]');
+    let activeFile = null;
+    let activeHash = null;
 
-    // --- DOM Elements ---
-    const connectBtn = document.getElementById('connect-wallet');
-    const disconnectBtn = document.getElementById('disconnect-wallet');
-    const walletInfo = document.getElementById('wallet-info');
-    const userAddressElem = document.getElementById('user-address');
-    const xlmBalanceElem = document.getElementById('xlm-balance');
-    
-    const dropZone = document.getElementById('drop-zone');
-    const fileInput = document.getElementById('file-input');
-    const previewArea = document.getElementById('preview-area');
-    const hashInfo = document.getElementById('hash-info');
-    const generatedHashElem = document.getElementById('generated-hash');
-    const secureBtn = document.getElementById('secure-btn');
+    // --- Selectors ---
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const walletConnectedUI = document.getElementById('wallet-connected');
+    const addrDisplay = document.getElementById('addr-display');
+    const balanceDisplay = document.getElementById('balance-display');
 
-    const testTxBtn = document.getElementById('test-tx-btn');
-    const txFeedback = document.getElementById('tx-feedback');
-    const txResultBox = document.getElementById('tx-result-box');
-    const txResultText = document.getElementById('tx-result-text');
+    const uploadZone = document.getElementById('upload-zone');
+    const footageInput = document.getElementById('footage-input');
+    const uploadPrompt = document.getElementById('upload-prompt');
+    const previewBox = document.getElementById('preview-box');
+    const previewMedia = document.getElementById('preview-media');
+    const fileNameElem = document.getElementById('file-name');
+    const fileSizeElem = document.getElementById('file-size');
 
-    const ledgerBody = document.getElementById('ledger-body');
-    const loader = document.getElementById('loader');
-    const loaderText = document.getElementById('loader-text');
+    const genHashBtn = document.getElementById('gen-hash-btn');
+    const hashReveal = document.getElementById('hash-reveal');
+    const displayHash = document.getElementById('display-hash');
+    const secureOnChainBtn = document.getElementById('secure-on-chain-btn');
 
-    // --- INITIALIZE ---
+    const auditInput = document.getElementById('audit-input');
+    const runAuditBtn = document.getElementById('run-audit-btn');
+    const auditResult = document.getElementById('audit-result');
+    const resultDisplay = document.getElementById('result-display');
+    const resultTitle = document.getElementById('result-title');
+    const resultMsg = document.getElementById('result-msg');
+    const auditExplorerLink = document.getElementById('audit-explorer-link');
+
+    const ledgerEntries = document.getElementById('ledger-entries');
+    const loader = document.getElementById('sc-loader');
+    const loaderMsg = document.getElementById('loader-msg');
+
+    // --- Init ---
     if (userPublicKey) {
-        setupAuthenticatedUI(userPublicKey);
-        fetchBalance(userPublicKey);
+        setAuthUI(userPublicKey);
+        refreshBalance(userPublicKey);
     }
-    renderHistory();
+    refreshLedger();
 
-    // --- 1. CONNECT WALLET ---
-    connectBtn.onclick = async () => {
+    // --- Authentication ---
+    loginBtn.onclick = async () => {
         const api = window.freighterApi;
-        if (!api) return alert('Freighter not found!');
+        if (!api) return alert('Freighter Extension not detected.');
 
-        showLoader('Connecting...');
+        showLoader('Synchronizing Wallet...');
         try {
             const address = await api.getPublicKey();
             userPublicKey = address;
-            localStorage.setItem('sc_wallet_address', address);
-            
-            setupAuthenticatedUI(address);
-            await fetchBalance(address);
+            localStorage.setItem('sc_wallet_addr', address);
+            setAuthUI(address);
+            await refreshBalance(address);
             hideLoader();
         } catch (err) {
             console.error(err);
@@ -56,127 +66,170 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- 2. DISCONNECT WALLET ---
-    disconnectBtn.onclick = () => {
-        userPublicKey = null;
-        localStorage.removeItem('sc_wallet_address');
+    logoutBtn.onclick = () => {
+        localStorage.removeItem('sc_wallet_addr');
         location.reload();
     };
 
-    // --- 3. FETCH BALANCE ---
-    async function fetchBalance(address) {
+    async function refreshBalance(address) {
         try {
             const account = await server.loadAccount(address);
             const native = account.balances.find(b => b.asset_type === 'native');
-            xlmBalanceElem.innerText = `${parseFloat(native.balance).toFixed(2)} XLM`;
+            balanceDisplay.innerText = `${parseFloat(native.balance).toFixed(2)} XLM`;
         } catch (e) {
-            xlmBalanceElem.innerText = '0.00 XLM';
+            balanceDisplay.innerText = '0.00 XLM';
         }
     }
 
-    // --- 4. SEND TRANSACTION (Level 1 Requirement) ---
-    testTxBtn.onclick = async () => {
-        showLoader('Signing Test Transaction...');
-        try {
-            const result = await sendStellarTransaction(userPublicKey, '1', 'Level 1 Test');
-            showTxFeedback(true, 'Test Transaction Sent!');
-            addToHistory('Transfer', result.hash);
-            await fetchBalance(userPublicKey);
-            hideLoader();
-        } catch (err) {
-            showTxFeedback(false, 'Transaction Failed');
-            hideLoader();
-        }
-    };
+    // --- Upload & Hash ---
+    uploadZone.onclick = () => footageInput.click();
 
-    // --- CCTV LOGIC ---
-    dropZone.onclick = () => fileInput.click();
-    fileInput.onchange = async (e) => {
+    footageInput.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+        activeFile = file;
 
-        showLoader('Generating Hash...');
-        const hash = await generateHash(file);
-        generatedHashElem.innerText = hash;
-        
-        previewArea.classList.remove('hidden');
-        hashInfo.classList.remove('hidden');
+        // Show Preview
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            previewMedia.innerHTML = '';
+            if (file.type.startsWith('video/')) {
+                const video = document.createElement('video');
+                video.src = ev.target.result;
+                video.autoplay = true; video.muted = true; video.loop = true;
+                previewMedia.appendChild(video);
+            } else {
+                const img = document.createElement('img');
+                img.src = ev.target.result;
+                previewMedia.appendChild(img);
+            }
+            uploadPrompt.classList.add('hidden');
+            previewBox.classList.remove('hidden');
+            fileNameElem.innerText = file.name;
+            fileSizeElem.innerText = formatSize(file.size);
+            genHashBtn.classList.remove('disabled');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    genHashBtn.onclick = async () => {
+        if (!activeFile) return;
+        showLoader('Generating SHA-256 Fingerprint...');
+        activeHash = await computeHash(activeFile);
+        displayHash.innerText = activeHash;
+        hashReveal.classList.remove('hidden');
         hideLoader();
     };
 
-    secureBtn.onclick = async () => {
-        const hash = generatedHashElem.innerText;
-        showLoader('Anchoring Footage...');
+    // --- Commit Logic ---
+    secureOnChainBtn.onclick = async () => {
+        if (!userPublicKey) return alert('Please connect system wallet first.');
+        showLoader('Awaiting Digital Signature...');
+        
         try {
-            const result = await sendStellarTransaction(userPublicKey, '0.00001', hash.slice(0, 28));
-            addToHistory('CCTV Anchor', result.hash);
-            await fetchBalance(userPublicKey);
-            alert('Footage integrity anchored on Stellar!');
+            const account = await server.loadAccount(userPublicKey);
+            const transaction = new StellarSdk.TransactionBuilder(account, {
+                fee: await server.fetchBaseFee(),
+                networkPassphrase: StellarSdk.Networks.TESTNET,
+            })
+            .addOperation(StellarSdk.Operation.payment({
+                destination: userPublicKey,
+                asset: StellarSdk.Asset.native(),
+                amount: '0.000001',
+            }))
+            .addMemo(StellarSdk.Memo.text(activeHash.slice(0, 28)))
+            .setTimeout(60)
+            .build();
+
+            const signedXDR = await window.freighterApi.signTransaction(transaction.toXDR(), { network: 'TESTNET' });
+            showLoader('Anchoring to Blockchain...');
+            const result = await server.submitTransaction(StellarSdk.TransactionBuilder.fromXDR(signedXDR, StellarSdk.Networks.TESTNET));
+            
+            activityLog.unshift({
+                time: new Date().toLocaleString(),
+                name: activeFile.name,
+                hash: activeHash,
+                tx: result.hash
+            });
+            localStorage.setItem('sc_pro_ledger', JSON.stringify(activityLog));
+            
+            refreshLedger();
+            alert('Success: Evidence anchored on Stellar Testnet.');
             hideLoader();
+            resetWorkflow();
         } catch (err) {
-            alert('Anchoring failed');
+            console.error(err);
+            alert('Security anchoring failed.');
             hideLoader();
         }
     };
 
-    // --- CORE BLOCKCHAIN LOGIC ---
-    async function sendStellarTransaction(address, amount, memo) {
-        const account = await server.loadAccount(address);
-        const transaction = new StellarSdk.TransactionBuilder(account, {
-            fee: await server.fetchBaseFee(),
-            networkPassphrase: StellarSdk.Networks.TESTNET,
-        })
-        .addOperation(StellarSdk.Operation.payment({
-            destination: address,
-            asset: StellarSdk.Asset.native(),
-            amount: amount,
-        }))
-        .addMemo(StellarSdk.Memo.text(memo))
-        .setTimeout(60)
-        .build();
+    // --- Audit Logic ---
+    runAuditBtn.onclick = async () => {
+        const file = auditInput.files[0];
+        if (!file) return alert('Select evidence to audit.');
 
-        const signedXDR = await window.freighterApi.signTransaction(transaction.toXDR(), { network: 'TESTNET' });
-        return await server.submitTransaction(StellarSdk.TransactionBuilder.fromXDR(signedXDR, StellarSdk.Networks.TESTNET));
+        showLoader('Verifying Cryptographic Markers...');
+        const newHash = await computeHash(file);
+        const record = activityLog.find(r => r.hash === newHash);
+
+        auditResult.classList.remove('hidden');
+        if (record) {
+            resultDisplay.className = 'result-display verified';
+            resultTitle.innerText = 'VERIFIED';
+            resultMsg.innerText = `Evidence matches digital signature anchored on blockchain at ${record.time}.`;
+            auditExplorerLink.href = `https://stellar.expert/explorer/testnet/tx/${record.tx}`;
+            auditExplorerLink.classList.remove('hidden');
+        } else {
+            resultDisplay.className = 'result-display tampered';
+            resultTitle.innerText = 'TAMPERED / UNKNOWN';
+            resultMsg.innerText = 'No matching cryptographic proof discovered in the secure ledger.';
+            auditExplorerLink.classList.add('hidden');
+        }
+        hideLoader();
+    };
+
+    // --- Helpers ---
+    async function computeHash(file) {
+        const buf = await file.arrayBuffer();
+        const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+        return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    async function generateHash(file) {
-        const buffer = await file.arrayBuffer();
-        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
-        return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    function setAuthUI(address) {
+        addrDisplay.innerText = `${address.slice(0, 4)}...${address.slice(-4)}`;
+        loginBtn.classList.add('hidden');
+        walletConnectedUI.classList.remove('hidden');
     }
 
-    // --- UI HELPERS ---
-    function setupAuthenticatedUI(address) {
-        userAddressElem.innerText = `${address.slice(0, 4)}...${address.slice(-4)}`;
-        connectBtn.classList.add('hidden');
-        walletInfo.classList.remove('hidden');
-        testTxBtn.classList.remove('disabled');
-    }
-
-    function showTxFeedback(success, msg) {
-        txFeedback.classList.remove('hidden');
-        txResultBox.className = success ? 'result-box' : 'result-box error';
-        txResultText.innerText = msg;
-    }
-
-    function addToHistory(type, hash) {
-        localHistory.unshift({ type, hash, date: new Date().toLocaleTimeString() });
-        localStorage.setItem('sc_v3_history', JSON.stringify(localHistory));
-        renderHistory();
-    }
-
-    function renderHistory() {
-        if (localHistory.length === 0) return;
-        ledgerBody.innerHTML = localHistory.map(item => `
+    function refreshLedger() {
+        if (activityLog.length === 0) return;
+        ledgerEntries.innerHTML = activityLog.map(item => `
             <tr>
-                <td><strong>${item.type}</strong></td>
-                <td><code>${item.hash.slice(0, 12)}...</code></td>
-                <td><span style="color: var(--success)">Success</span></td>
-                <td><a href="https://stellar.expert/explorer/testnet/tx/${item.hash}" target="_blank" class="link-btn">View Explorer</a></td>
+                <td><strong>${item.time}</strong></td>
+                <td>${item.name}</td>
+                <td><code>${item.hash.slice(0, 18)}...</code></td>
+                <td><span style="color: var(--cyan); font-weight: 700;">ANCHORED</span></td>
             </tr>
         `).join('');
     }
 
-    function showLoader(txt) { loaderText.innerText = txt; loader.classList.remove('hidden'); }
+    function resetWorkflow() {
+        activeFile = null; activeHash = null;
+        footageInput.value = '';
+        uploadPrompt.classList.remove('hidden');
+        previewBox.classList.add('hidden');
+        hashReveal.classList.add('hidden');
+        genHashBtn.classList.add('disabled');
+    }
+
+    function formatSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + ['Bytes', 'KB', 'MB', 'GB'][i];
+    }
+
+    function showLoader(txt) { loaderMsg.innerText = txt; loader.classList.remove('hidden'); }
     function hideLoader() { loader.classList.add('hidden'); }
 });
