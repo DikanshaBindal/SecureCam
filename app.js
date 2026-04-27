@@ -99,8 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
         userPublicKey = address;
         navAddr.innerText = `${address.slice(0, 6)}...${address.slice(-6)}`;
         
-        await refreshBalance();
-        initCamera();
+        // Background tasks (non-blocking)
+        refreshBalance();
         renderVault();
         
         walletGate.classList.add('hidden');
