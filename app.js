@@ -95,18 +95,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 2. LIVE CAMERA LOGIC ---
     async function initCamera() {
         const videoWrap = document.querySelector('.video-stage');
-        videoWrap.insertAdjacentHTML('beforeend', '<div id="cam-loading" class="cam-overlay">ESTABLISHING SECURE COMM LINK...</div>');
+        videoWrap.insertAdjacentHTML('beforeend', `
+            <div id="cam-loading" class="cam-overlay">
+                <div>ESTABLISHING SECURE COMM LINK...</div>
+                <button id="skip-cam-btn" class="btn-cyan-outline mt-4" style="font-size:0.6rem; padding:0.4rem 0.8rem;">USE SIMULATED FEED</button>
+            </div>
+        `);
+
+        document.getElementById('skip-cam-btn').onclick = (e) => {
+            e.stopPropagation();
+            clearTimeout(timeout);
+            startSimulation();
+        };
 
         const timeout = setTimeout(() => {
             const loader = document.getElementById('cam-loading');
             if (loader) {
                 loader.innerText = 'HARDWARE DELAY - SWITCHING TO SIMULATED FEED';
-                setTimeout(() => {
-                    if (loader) loader.classList.add('hidden');
-                    startSimulation();
-                }, 1000);
+                setTimeout(() => startSimulation(), 1000);
             }
-        }, 3000);
+        }, 8000); // Increased timeout to give users more choice
 
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -127,10 +135,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startSimulation() {
-        const loader = document.getElementById('cam-loading');
-        if (loader) loader.classList.add('hidden');
+        document.querySelectorAll('.cam-overlay').forEach(el => el.classList.add('hidden'));
         videoFeed.style.backgroundColor = '#000';
-        videoFeed.insertAdjacentHTML('afterend', '<div class="sim-overlay">[ SECURE SIMULATED FEED - TEST MODE ]</div>');
+        // Prevent double injection
+        if (!document.querySelector('.sim-overlay')) {
+            videoFeed.insertAdjacentHTML('afterend', '<div class="sim-overlay">[ SECURE SIMULATED FEED - TEST MODE ]</div>');
+        }
         
         setInterval(() => {
             const now = new Date();
