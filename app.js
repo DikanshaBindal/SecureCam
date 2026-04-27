@@ -49,11 +49,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 1. WALLET GATE LOGIC ---
     gateConnectBtn.onclick = async () => {
-        // Universal Detection (v1.x uses freighterApi, v6.x uses freighter)
-        const api = window.freighterApi || window.freighter;
+        showLoader('SEARCHING FOR WALLET...');
+        
+        // Wait up to 2 seconds for script to initialize
+        let attempts = 0;
+        const apiCheck = await new Promise(resolve => {
+            const check = () => {
+                const found = window.freighterApi || window.freighter;
+                if (found || attempts > 20) resolve(found);
+                else { attempts++; setTimeout(check, 100); }
+            };
+            check();
+        });
+
+        const api = apiCheck;
         
         if (!api) {
-            gateError.innerText = 'EXTENSION NOT FOUND: Please install Freighter Wallet from freighter.app and refresh.';
+            gateError.innerText = 'EXTENSION NOT FOUND: Please install Freighter Wallet and refresh the page.';
             gateError.classList.remove('hidden');
             hideLoader();
             return;
