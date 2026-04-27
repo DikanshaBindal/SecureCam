@@ -47,31 +47,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const loader = document.getElementById('sc-loader');
     const loaderMsg = document.getElementById('loader-msg');
 
-    // --- 1. WALLET CONNECTION (PRO MERGE) ---
+    // --- 1. WALLET CONNECTION (STRICT) ---
     gateConnectBtn.onclick = async () => {
-        showLoader('AUTHENTICATING SYSTEM...');
+        showLoader('WAITING FOR FREIGHTER...');
         
-        // Universal detection (Old v1 name and New v6 name)
-        const api = window.freighterApi || window.freighter;
+        let attempts = 0;
+        const api = await new Promise(resolve => {
+            const check = () => {
+                const found = window.freighterApi || window.freighter;
+                if (found || attempts > 30) resolve(found);
+                else { attempts++; setTimeout(check, 100); }
+            };
+            check();
+        });
+
+        if (!api) {
+            gateError.innerText = 'EXTENSION NOT FOUND: Please install Freighter Wallet and refresh.';
+            gateError.classList.remove('hidden');
+            hideLoader();
+            return;
+        }
 
         try {
-            if (!api) throw new Error("Freighter not found");
-
             const address = await api.getPublicKey();
-            if (!address) throw new Error("Connection denied");
-
+            if (!address) throw new Error("Approval denied");
             enterDashboard(address);
         } catch (err) {
-            console.warn("Switching to Demo Fallback:", err.message);
-            const demoWallet = "GC5DFX6LCMBB6255RVZTARSMYVBPUBM2VUIGVZKYSTCXEUXYZZGENB4R";
-            
-            gateError.innerText = "Wallet not found — Entering Demo Mode";
+            console.error("Strict Connect Fail:", err);
+            gateError.innerText = `CONNECT FAIL: ${err.message || 'Check extension status'}`;
             gateError.classList.remove('hidden');
-            
-            enterDashboard(demoWallet);
         }
         hideLoader();
     };
+
+    // --- 2. DEMO MODE (OPTIONAL) ---
+    const demoLink = document.getElementById('demo-mode-link');
+    if (demoLink) {
+        demoLink.onclick = (e) => {
+            e.preventDefault();
+            showLoader('INITIALIZING DEMO ENVIRONMENT...');
+            setTimeout(() => {
+                const demoWallet = "GC5DFX6LCMBB6255RVZTARSMYVBPUBM2VUIGVZKYSTCXEUXYZZGENB4R";
+                enterDashboard(demoWallet);
+                hideLoader();
+            }, 1000);
+        };
+    }
 
     async function enterDashboard(address) {
         userPublicKey = address;
