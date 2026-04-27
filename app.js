@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const { address } = await api.getAddress();
+            const address = await api.getPublicKey();
             userPublicKey = address;
             
             userAddressElem.innerText = `${address.slice(0, 6)}...${address.slice(-6)}`;
