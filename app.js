@@ -1,235 +1,221 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Configuration ---
+    // --- State & Config ---
     const HORIZON_URL = 'https://horizon-testnet.stellar.org';
     const server = new StellarSdk.Horizon.Server(HORIZON_URL);
+    const ACCESS_KEY = 'ADMIN123'; // Default Demo Key
+
+    let userPublicKey = null;
+    let savedRecordings = JSON.parse(localStorage.getItem('sc_suite_vault') || '[]');
+    let currentAuditHash = null;
+    let pendingViewerItem = null;
+
+    // --- DOM Elements ---
+    const walletGate = document.getElementById('wallet-gate');
+    const gateConnectBtn = document.getElementById('gate-connect-btn');
+    const gateError = document.getElementById('gate-error');
     
-    let userPublicKey = localStorage.getItem('sc_wallet_addr');
-    let activityLog = JSON.parse(localStorage.getItem('sc_pro_ledger') || '[]');
-    let activeFile = null;
-    let activeHash = null;
+    const dashboard = document.getElementById('main-dashboard');
+    const navAddr = document.getElementById('nav-addr');
+    const navBalance = document.getElementById('nav-balance');
+    const navLogout = document.getElementById('nav-logout');
 
-    // --- Selectors ---
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const walletConnectedUI = document.getElementById('wallet-connected');
-    const addrDisplay = document.getElementById('addr-display');
-    const balanceDisplay = document.getElementById('balance-display');
+    const videoFeed = document.getElementById('webcam-feed');
+    const startRecBtn = document.getElementById('start-rec-btn');
+    const recordingsList = document.getElementById('recordings-list');
+    const liveTimestamp = document.getElementById('live-timestamp');
 
-    const uploadZone = document.getElementById('upload-zone');
-    const footageInput = document.getElementById('footage-input');
-    const uploadPrompt = document.getElementById('upload-prompt');
-    const previewBox = document.getElementById('preview-box');
-    const previewMedia = document.getElementById('preview-media');
-    const fileNameElem = document.getElementById('file-name');
-    const fileSizeElem = document.getElementById('file-size');
+    const auditDropZone = document.getElementById('audit-drop-zone');
+    const auditFileInput = document.getElementById('audit-file-input');
+    const auditReport = document.getElementById('audit-report');
+    const auditHashDisplay = document.getElementById('audit-hash-display');
+    const auditVerifyBtn = document.getElementById('audit-verify-btn');
+    const auditVerdict = document.getElementById('audit-verdict');
+    const verdictStatus = document.getElementById('verdict-status');
+    const verdictMsg = document.getElementById('verdict-msg');
 
-    const genHashBtn = document.getElementById('gen-hash-btn');
-    const hashReveal = document.getElementById('hash-reveal');
-    const displayHash = document.getElementById('display-hash');
-    const secureOnChainBtn = document.getElementById('secure-on-chain-btn');
+    const keyModal = document.getElementById('key-modal');
+    const keyInput = document.getElementById('access-key-input');
+    const confirmKeyBtn = document.getElementById('confirm-key');
+    const cancelModalBtn = document.getElementById('cancel-modal');
+    const keyError = document.getElementById('key-error');
 
-    const auditInput = document.getElementById('audit-input');
-    const runAuditBtn = document.getElementById('run-audit-btn');
-    const auditResult = document.getElementById('audit-result');
-    const resultDisplay = document.getElementById('result-display');
-    const resultTitle = document.getElementById('result-title');
-    const resultMsg = document.getElementById('result-msg');
-    const auditExplorerLink = document.getElementById('audit-explorer-link');
+    const viewerModal = document.getElementById('viewer-modal');
+    const viewerBody = document.getElementById('viewer-body');
+    const viewerTitle = document.getElementById('viewer-title');
+    const closeViewerBtn = document.getElementById('close-viewer');
 
-    const ledgerEntries = document.getElementById('ledger-entries');
     const loader = document.getElementById('sc-loader');
     const loaderMsg = document.getElementById('loader-msg');
 
-    // --- Init ---
-    if (userPublicKey) {
-        setAuthUI(userPublicKey);
-        refreshBalance(userPublicKey);
-    }
-    refreshLedger();
-
-    // --- Authentication ---
-    loginBtn.onclick = async () => {
+    // --- 1. WALLET GATE LOGIC ---
+    gateConnectBtn.onclick = async () => {
+        showLoader('AUTHENTICATING SYSTEM...');
         const api = window.freighterApi;
-        if (!api) return alert('Freighter Extension not detected.');
+        
+        if (!api) {
+            gateError.innerText = 'Freighter Not Found. Switched to DEMO MODE.';
+            gateError.classList.remove('hidden');
+            setTimeout(() => enterDashboard('GB_DEMO_ACCOUNT_12345'), 1500);
+            return;
+        }
 
-        showLoader('Synchronizing Wallet...');
         try {
             const address = await api.getPublicKey();
-            userPublicKey = address;
-            localStorage.setItem('sc_wallet_addr', address);
-            setAuthUI(address);
-            await refreshBalance(address);
-            hideLoader();
+            enterDashboard(address);
         } catch (err) {
-            console.error(err);
+            gateError.innerText = 'Authentication Failed.';
+            gateError.classList.remove('hidden');
             hideLoader();
         }
     };
 
-    logoutBtn.onclick = () => {
-        localStorage.removeItem('sc_wallet_addr');
-        location.reload();
-    };
-
-    async function refreshBalance(address) {
-        try {
-            const account = await server.loadAccount(address);
-            const native = account.balances.find(b => b.asset_type === 'native');
-            balanceDisplay.innerText = `${parseFloat(native.balance).toFixed(2)} XLM`;
-        } catch (e) {
-            balanceDisplay.innerText = '0.00 XLM';
-        }
+    async function enterDashboard(address) {
+        userPublicKey = address;
+        navAddr.innerText = `${address.slice(0, 6)}...${address.slice(-6)}`;
+        
+        await refreshBalance();
+        initCamera();
+        renderVault();
+        
+        walletGate.classList.add('hidden');
+        dashboard.classList.remove('hidden');
+        lucide.createIcons();
+        hideLoader();
     }
 
-    // --- Upload & Hash ---
-    uploadZone.onclick = () => footageInput.click();
-
-    footageInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        activeFile = file;
-
-        // Show Preview
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            previewMedia.innerHTML = '';
-            if (file.type.startsWith('video/')) {
-                const video = document.createElement('video');
-                video.src = ev.target.result;
-                video.autoplay = true; video.muted = true; video.loop = true;
-                previewMedia.appendChild(video);
-            } else {
-                const img = document.createElement('img');
-                img.src = ev.target.result;
-                previewMedia.appendChild(img);
-            }
-            uploadPrompt.classList.add('hidden');
-            previewBox.classList.remove('hidden');
-            fileNameElem.innerText = file.name;
-            fileSizeElem.innerText = formatSize(file.size);
-            genHashBtn.classList.remove('disabled');
-        };
-        reader.readAsDataURL(file);
-    };
-
-    genHashBtn.onclick = async () => {
-        if (!activeFile) return;
-        showLoader('Generating SHA-256 Fingerprint...');
-        activeHash = await computeHash(activeFile);
-        displayHash.innerText = activeHash;
-        hashReveal.classList.remove('hidden');
-        hideLoader();
-    };
-
-    // --- Commit Logic ---
-    secureOnChainBtn.onclick = async () => {
-        if (!userPublicKey) return alert('Please connect system wallet first.');
-        showLoader('Awaiting Digital Signature...');
-        
+    async function refreshBalance() {
+        if (!userPublicKey || userPublicKey.includes('DEMO')) return;
         try {
             const account = await server.loadAccount(userPublicKey);
-            const transaction = new StellarSdk.TransactionBuilder(account, {
-                fee: await server.fetchBaseFee(),
-                networkPassphrase: StellarSdk.Networks.TESTNET,
-            })
-            .addOperation(StellarSdk.Operation.payment({
-                destination: userPublicKey,
-                asset: StellarSdk.Asset.native(),
-                amount: '0.000001',
-            }))
-            .addMemo(StellarSdk.Memo.text(activeHash.slice(0, 28)))
-            .setTimeout(60)
-            .build();
+            const native = account.balances.find(b => b.asset_type === 'native');
+            navBalance.innerText = `${parseFloat(native.balance).toFixed(2)} XLM`;
+        } catch (e) { console.error('Balance fetch failed'); }
+    }
 
-            const signedXDR = await window.freighterApi.signTransaction(transaction.toXDR(), { network: 'TESTNET' });
-            showLoader('Anchoring to Blockchain...');
-            const result = await server.submitTransaction(StellarSdk.TransactionBuilder.fromXDR(signedXDR, StellarSdk.Networks.TESTNET));
+    // --- 2. LIVE CAMERA LOGIC ---
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            videoFeed.srcObject = stream;
             
-            activityLog.unshift({
-                time: new Date().toLocaleString(),
-                name: activeFile.name,
-                hash: activeHash,
-                tx: result.hash
-            });
-            localStorage.setItem('sc_pro_ledger', JSON.stringify(activityLog));
-            
-            refreshLedger();
-            alert('Success: Evidence anchored on Stellar Testnet.');
-            hideLoader();
-            resetWorkflow();
+            // Start Clock
+            setInterval(() => {
+                const now = new Date();
+                liveTimestamp.innerText = now.toLocaleTimeString();
+            }, 1000);
         } catch (err) {
-            console.error(err);
-            alert('Security anchoring failed.');
-            hideLoader();
+            console.error('Camera access denied', err);
+        }
+    }
+
+    startRecBtn.onclick = () => {
+        const timestamp = new Date().toLocaleString();
+        const id = 'REC_' + Date.now();
+        const newItem = {
+            id: id,
+            name: `Surveillance_${id}.mp4`,
+            time: timestamp,
+            hash: 'SIMULATED_HASH_' + Math.random().toString(36).substring(7).toUpperCase()
+        };
+
+        savedRecordings.unshift(newItem);
+        localStorage.setItem('sc_suite_vault', JSON.stringify(savedRecordings));
+        renderVault();
+        alert('Footage captured and secured in vault.');
+    };
+
+    // --- 3. VAULT & ACCESS CONTROL ---
+    function renderVault() {
+        if (savedRecordings.length === 0) {
+            recordingsList.innerHTML = '<div class="empty-state">No recordings archived.</div>';
+            return;
+        }
+
+        recordingsList.innerHTML = savedRecordings.map(item => `
+            <div class="vault-item" onclick="requestAccess('${item.id}')">
+                <i data-lucide="video"></i>
+                <div class="vault-info">
+                    <span class="name">${item.name}</span>
+                    <span class="time">${item.time}</span>
+                </div>
+            </div>
+        `).join('');
+        lucide.createIcons();
+    }
+
+    window.requestAccess = (id) => {
+        pendingViewerItem = savedRecordings.find(r => r.id === id);
+        keyModal.classList.remove('hidden');
+        keyInput.value = '';
+        keyError.classList.add('hidden');
+    };
+
+    confirmKeyBtn.onclick = () => {
+        if (keyInput.value === ACCESS_KEY) {
+            openViewer(pendingViewerItem);
+            keyModal.classList.add('hidden');
+        } else {
+            keyError.classList.remove('hidden');
         }
     };
 
-    // --- Audit Logic ---
-    runAuditBtn.onclick = async () => {
-        const file = auditInput.files[0];
-        if (!file) return alert('Select evidence to audit.');
+    cancelModalBtn.onclick = () => keyModal.classList.add('hidden');
 
-        showLoader('Verifying Cryptographic Markers...');
-        const newHash = await computeHash(file);
-        const record = activityLog.find(r => r.hash === newHash);
+    function openViewer(item) {
+        viewerTitle.innerText = item.name;
+        viewerBody.innerHTML = `
+            <div style="text-align:center; color:var(--cyan)">
+                <i data-lucide="play-circle" style="width:80px; height:80px; margin-bottom:1rem;"></i>
+                <h2>DECRYPTED DATA STREAM</h2>
+                <p style="color:var(--text-muted); margin-top:0.5rem;">Cryptographic Hash: ${item.hash}</p>
+                <div style="margin-top:2rem; width:300px; height:150px; background:#111; border:1px solid var(--border); display:flex; align-items:center; justify-content:center;">
+                    <span style="font-size:0.7rem; letter-spacing:0.1em;">[ SIMULATED VIDEO FEED ]</span>
+                </div>
+            </div>
+        `;
+        viewerModal.classList.remove('hidden');
+        lucide.createIcons();
+    }
 
-        auditResult.classList.remove('hidden');
-        if (record) {
-            resultDisplay.className = 'result-display verified';
-            resultTitle.innerText = 'VERIFIED';
-            resultMsg.innerText = `Evidence matches digital signature anchored on blockchain at ${record.time}.`;
-            auditExplorerLink.href = `https://stellar.expert/explorer/testnet/tx/${record.tx}`;
-            auditExplorerLink.classList.remove('hidden');
-        } else {
-            resultDisplay.className = 'result-display tampered';
-            resultTitle.innerText = 'TAMPERED / UNKNOWN';
-            resultMsg.innerText = 'No matching cryptographic proof discovered in the secure ledger.';
-            auditExplorerLink.classList.add('hidden');
-        }
+    closeViewerBtn.onclick = () => viewerModal.classList.add('hidden');
+
+    // --- 4. VERIFICATION LOGIC ---
+    auditDropZone.onclick = () => auditFileInput.click();
+    auditFileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        showLoader('ANALYZING CRYPTOGRAPHY...');
+        currentAuditHash = await computeSHA256(file);
+        auditHashDisplay.innerText = currentAuditHash;
+        auditReport.classList.remove('hidden');
+        auditVerdict.classList.add('hidden');
         hideLoader();
     };
 
-    // --- Helpers ---
-    async function computeHash(file) {
+    auditVerifyBtn.onclick = () => {
+        const match = savedRecordings.find(r => r.hash === currentAuditHash);
+        
+        auditVerdict.classList.remove('hidden');
+        if (match) {
+            auditVerdict.className = 'verdict-box verified';
+            verdictStatus.innerText = 'VERIFIED';
+            verdictMsg.innerText = 'Evidence markers match secure ledger signature.';
+        } else {
+            auditVerdict.className = 'verdict-box tampered';
+            verdictStatus.innerText = 'TAMPERED / UNKNOWN';
+            verdictMsg.innerText = 'No matching signature found. Possible data corruption.';
+        }
+    };
+
+    // --- HELPERS ---
+    async function computeSHA256(file) {
         const buf = await file.arrayBuffer();
         const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-        return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    function setAuthUI(address) {
-        addrDisplay.innerText = `${address.slice(0, 4)}...${address.slice(-4)}`;
-        loginBtn.classList.add('hidden');
-        walletConnectedUI.classList.remove('hidden');
-    }
-
-    function refreshLedger() {
-        if (activityLog.length === 0) return;
-        ledgerEntries.innerHTML = activityLog.map(item => `
-            <tr>
-                <td><strong>${item.time}</strong></td>
-                <td>${item.name}</td>
-                <td><code>${item.hash.slice(0, 18)}...</code></td>
-                <td><span style="color: var(--cyan); font-weight: 700;">ANCHORED</span></td>
-            </tr>
-        `).join('');
-    }
-
-    function resetWorkflow() {
-        activeFile = null; activeHash = null;
-        footageInput.value = '';
-        uploadPrompt.classList.remove('hidden');
-        previewBox.classList.add('hidden');
-        hashReveal.classList.add('hidden');
-        genHashBtn.classList.add('disabled');
-    }
-
-    function formatSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + ['Bytes', 'KB', 'MB', 'GB'][i];
+        return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
     }
 
     function showLoader(txt) { loaderMsg.innerText = txt; loader.classList.remove('hidden'); }
     function hideLoader() { loader.classList.add('hidden'); }
+    navLogout.onclick = () => location.reload();
 });
