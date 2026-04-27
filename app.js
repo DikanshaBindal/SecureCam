@@ -94,9 +94,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 2. LIVE CAMERA LOGIC ---
     async function initCamera() {
+        const videoWrap = document.querySelector('.video-stage');
+        videoWrap.insertAdjacentHTML('beforeend', '<div id="cam-loading" class="cam-overlay">ESTABLISHING SECURE COMM LINK...</div>');
+
+        const timeout = setTimeout(() => {
+            const loader = document.getElementById('cam-loading');
+            if (loader) {
+                loader.innerText = 'HARDWARE DELAY - SWITCHING TO SIMULATED FEED';
+                setTimeout(() => {
+                    if (loader) loader.classList.add('hidden');
+                    startSimulation();
+                }, 1000);
+            }
+        }, 3000);
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            clearTimeout(timeout);
             videoFeed.srcObject = stream;
+            const loader = document.getElementById('cam-loading');
+            if (loader) loader.classList.add('hidden');
             
             // Start Clock
             setInterval(() => {
@@ -104,8 +121,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 liveTimestamp.innerText = now.toLocaleTimeString();
             }, 1000);
         } catch (err) {
-            console.error('Camera access denied', err);
+            console.error('Camera access denied or hardware busy', err);
+            startSimulation();
         }
+    }
+
+    function startSimulation() {
+        const loader = document.getElementById('cam-loading');
+        if (loader) loader.classList.add('hidden');
+        videoFeed.style.backgroundColor = '#000';
+        videoFeed.insertAdjacentHTML('afterend', '<div class="sim-overlay">[ SECURE SIMULATED FEED - TEST MODE ]</div>');
+        
+        setInterval(() => {
+            const now = new Date();
+            liveTimestamp.innerText = now.toLocaleTimeString();
+        }, 1000);
     }
 
     startRecBtn.onclick = () => {
