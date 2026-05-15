@@ -1,4 +1,4 @@
-# SecureCam — Level 3 Integrity dApp
+# SecureCam 
 
 A simple yet powerful dApp to ensure CCTV footage integrity using the Stellar Blockchain.
 
